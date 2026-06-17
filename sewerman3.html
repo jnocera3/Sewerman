@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>SEWERMAN 3</title>
+
+<style>
+body {
+    background: black;
+    color: lime;
+    font-family: monospace;
+    max-width: 800px;
+    margin: 30px auto;
+}
+
+#output {
+    white-space: pre-line;
+    margin-bottom: 20px;
+}
+
+input {
+    padding: 8px;
+    width: 300px;
+}
+
+button {
+    padding: 8px 15px;
+}
+</style>
+</head>
+
+<body>
+
+<h2>SEWERMAN 3: REVENGE OF THE FLUSHED GATORS</h2>
+
+<div id="output"></div>
+
+<input id="answer" autofocus>
+<button onclick="submitAnswer()">Submit</button>
+
+<script>
+
+const output = document.getElementById("output");
+const answer = document.getElementById("answer");
+
+let gator = Math.floor(Math.random() * 3) + 1;
+let stage = 0;
+
+print("YOU IN SEWER");
+print("ENTER DIRECTION 1-N, 2-S, 3-E, 4-W");
+
+function print(text="") {
+    output.innerHTML += text + "<br>";
+    output.scrollTop = output.scrollHeight;
+}
+
+function endGame(msg) {
+    print(msg);
+    print("");
+    print("THE END");
+    answer.disabled = true;
+}
+
+function submitAnswer() {
+
+    const a = answer.value.trim().toUpperCase();
+    answer.value = "";
+
+    switch(stage) {
+
+        case 0:
+            if (a !== "1") {
+                endGame("DEAD");
+            } else {
+                print("ALIVE");
+                print("SEE DONKEY");
+                print("KICK ASS (Y,N)");
+                stage = 1;
+            }
+            break;
+
+        case 1:
+            if (a === "N") {
+                endGame("DEAD");
+            } else {
+                print("ALIVE, ASS HAS BEEN KICKED");
+                print("MAP OF SEWER COMES FLYING OUT OF ASS");
+                print("DO YOU WISH TO INVESTIGATE ASS FURTHER? (Y/N)");
+                stage = 2;
+            }
+            break;
+
+        case 2:
+            if (a === "Y") {
+                print("HAND DEAD BECAUSE HAND MELTED IN HOT ASS");
+            } else {
+                print("ALIVE");
+            }
+
+            print("SEE SEWAGE MONSTER");
+            print("MONSTER FARTS IN FACE");
+            print("YOU HAVE BREATHED IN ALL THE FART GAS.");
+            print("DO YOU WISH TO BLAST A FART BACK IN HIS FACE? (Y/N)");
+            stage = 3;
+            break;
+
+        case 3:
+            if (a === "N") {
+                endGame("MONSTER AMPUTATES ALL FOUR OF YOUR LIMBS");
+            } else {
+                print("THOSE 6 BURRITOS FOR LUNCH PAY OFF");
+                print("MONSTER NOW DEAD FROM MASSIVE GAS INHALEMENT");
+                print("YOU CONTINUE THROUGH THE SEWER");
+                print("SEE ALLIGATOR PIT. JUMP IN (Y,N)?");
+                stage = 4;
+            }
+            break;
+
+        case 4:
+            if (a === "N") {
+                print("YOU SLIP ON SEWAGE AND FALL IN ANYWAY. FOOT BROKE.");
+            } else {
+                print("YOU BELLYFLOP INTO THE PIT.");
+            }
+
+            print("");
+            print("THERE ARE 3 ALLIGATORS, CHOOSE ONE TO WRESTLE:");
+            print("1 - BIG BERTHA");
+            print("2 - PONDGUT HARRY");
+            print("3 - SWAMPLAND BILL");
+
+            stage = 5;
+            break;
+
+        case 5:
+
+            if (parseInt(a) !== gator) {
+                endGame("GATOR SWALLOWS YOU WHOLE. YOU DEAD.");
+            } else {
+                endGame(
+                    "YOU CHOP OFF TAIL. WILL MAKE A NICE SUITCASE. YOU WIN."
+                );
+            }
+
+            break;
+    }
+}
+
+answer.addEventListener("keydown", function(e){
+    if (e.key === "Enter") {
+        submitAnswer();
+    }
+});
+
+</script>
+
+</body>
+</html>
