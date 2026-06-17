@@ -37,17 +37,32 @@ button {
 
 <input id="answer" autofocus>
 <button onclick="submitAnswer()">Submit</button>
+<button onclick="resetGame()">Restart</button>
 
 <script>
 
 const output = document.getElementById("output");
 const answer = document.getElementById("answer");
 
-let gator = Math.floor(Math.random() * 3) + 1;
-let stage = 0;
+function resetGame() {
 
-print("YOU IN SEWER");
-print("ENTER DIRECTION 1-N, 2-S, 3-E, 4-W");
+    output.innerHTML = "";
+
+    gator = Math.floor(Math.random() * 3) + 1;
+    stage = 0;
+
+    answer.disabled = false;
+    answer.value = "";
+    answer.focus();
+
+    print("YOU IN SEWER");
+    print("ENTER DIRECTION 1-N, 2-S, 3-E, 4-W");
+}
+
+let gator;
+let stage;
+
+resetGame();
 
 function print(text="") {
     output.innerHTML += text + "<br>";
