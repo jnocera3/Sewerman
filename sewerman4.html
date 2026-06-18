@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>SEWERMAN 4 — THE EPIC</title>
+
+<style>
+body{
+    background:black;
+    color:lime;
+    font-family:monospace;
+    max-width:900px;
+    margin:20px auto;
+}
+
+#output{
+    border:1px solid green;
+    padding:15px;
+    min-height:450px;
+    white-space:pre-line;
+}
+
+input{
+    padding:8px;
+    width:250px;
+}
+
+button{
+    padding:8px 14px;
+}
+
+.controls{
+    margin-top:15px;
+}
+</style>
+</head>
+
+<body>
+
+<h2>SEWERMAN 4 — THE EPIC</h2>
+
+<div id="output"></div>
+
+<div class="controls">
+<input id="answer" autofocus>
+<button onclick="submitAnswer()">Submit</button>
+<button onclick="restartGame()">Restart</button>
+</div>
+
+<script>
+
+const out = document.getElementById("output");
+const input = document.getElementById("answer");
+
+let state;
+
+function print(t=""){
+    out.innerHTML += t + "<br>";
+    out.scrollTop = out.scrollHeight;
+}
+
+function endGame(msg){
+    print("");
+    print(msg);
+    print("");
+    print("===== GAME OVER =====");
+    print("Press Restart to play again");
+    input.disabled=true;
+}
+
+function restartGame(){
+
+    out.innerHTML="";
+    input.disabled=false;
+    input.value="";
+    input.focus();
+
+    state="start";
+
+    print("YOU ARE IN A SEWER.");
+    print("YOU ARE SEARCHING FOR THE GOLDEN PLUNGER.");
+    print("");
+    print("WHICH DIRECTION DO YOU WISH TO GO");
+    print("");
+    print("1 - NORTH");
+    print("2 - SOUTH");
+    print("3 - WEST");
+    print("4 - EAST");
+}
+
+function submitAnswer(){
+
+let a=input.value.trim();
+input.value="";
+
+switch(state){
+
+case "start":
+
+if(a==="4"){
+endGame(
+`ADVERTISEMENT!
+
+BE SURE TO PICK UP SEWERMAN 1,2 AND 3
+AT YOUR LOCAL COMPUTER ROOM`
+);
+}
+
+else if(a==="2"){
+endGame(
+"YOU WENT SOUTH. EVEN A JERK KNOWS THAT GOING SOUTH MEANS YOU ARE DEAD."
+);
+}
+
+else if(a==="1"){
+
+print("");
+print("YOU ARE IN A DARK ROOM.");
+print("YOU HEAR A HIGH PITCHED NOISE.");
+print("");
+print("1 - LEAVE ROOM");
+print("2 - INVESTIGATE NOISE");
+
+state="north_room";
+}
+
+else if(a==="3"){
+
+print("");
+print("YOU SEE A 3-EYED MONSTER.");
+print("DO YOU WISH TO DO BATTLE?");
+print("");
+print("1 - YES");
+print("2 - NO");
+
+state="west_monster";
+}
+
+break;
+
+
+/* WEST PATH */
+
+case "west_monster":
+
+if(a==="2"){
+endGame("MONSTER HAS EATEN YOU");
+}
+else{
+
+print("");
+print("YOU BLAST FART GAS INTO THE MONSTER.");
+print("THE MONSTER DIES.");
+
+print("");
+print("YOU FIND A HUGE APPLE PIE.");
+
+print("1 - EAT PIE");
+print("2 - DO NOT EAT");
+
+state="pie";
+}
+
+break;
+
+case "pie":
+
+if(a==="2"){
+endGame("3-EYED MONSTER WAS NOT DEAD AFTERALL. YOU ARE DEAD.");
+}
+else{
+
+print("");
+print("MAP FOUND INSIDE PIE.");
+print("");
+print('"THE GOLDEN PLUNGER IS IN THE VALLEY OF THE GOLDEN SEWAGE"');
+
+print("");
+print("YOU REACH A HUGE PIT.");
+
+print("1 - JUMP");
+print("2 - BUILD SEWAGE BRIDGE");
+print("3 - WALK");
+
+state="pit";
+}
+
+break;
+
+
+case "pit":
+
+if(a==="1"){
+endGame("YOU FELL SHORT. YOU ARE DEAD.");
+}
+
+else if(a==="3"){
+endGame("THERE IS NOTHING TO WALK ON. YOU ARE DEAD.");
+}
+
+else{
+
+print("");
+print("THE BRIDGE WORKS.");
+
+print("");
+print("YOU SEE A BRIGHT LIGHT.");
+
+print("1 - APPROACH");
+print("2 - WALK AWAY");
+
+state="light";
+}
+
+break;
+
+
+case "light":
+
+if(a==="1"){
+endGame("THE MONSTER HAD 2 EYES. YOU WERE EATEN.");
+}
+
+else{
+
+print("");
+print("YOU FIND A SINGING MONSTER.");
+
+print("1 - MEET MONSTER");
+print("2 - RUN");
+
+state="oneeye";
+}
+
+break;
+
+
+case "oneeye":
+
+if(a==="2"){
+endGame("3-EYED MONSTER WAS NOT DEAD AFTERALL. YOU ARE DEAD.");
+}
+
+else{
+
+print("");
+print("IT IS THE 1-EYED MONSTER.");
+
+print("THE RIVER OF HOT MOLTEN SEWAGE TURNS INTO ROCK.");
+
+print("");
+print("YOU FIND THE GOLDEN PLUNGER.");
+
+print("");
+print("4-EYED MONSTER APPEARS");
+
+print("1 - FART");
+print("2 - TALK");
+print("3 - YELL");
+print("4 - FLYING KICK");
+
+state="boss";
+}
+
+break;
+
+
+case "boss":
+
+if(a==="3"){
+
+print("");
+print('YOU YELL "CROP CIRCLE"');
+
+print("MONSTER COLLAPSES.");
+
+print("");
+print("THE GOLDEN PLUNGER IS YOURS.");
+
+print("");
+print("***** CONGRATULATIONS *****");
+
+print("YOU WIN");
+
+input.disabled=true;
+
+}
+else{
+endGame("YOUR ATTEMPT FAILED. YOU ARE DEAD.");
+}
+
+break;
+
+
+/* NORTH PATH */
+
+case "north_room":
+
+if(a==="1"){
+
+print("");
+print("BACK IN MAIN PASSAGE");
+
+print("1 SOUTH");
+print("2 WEST");
+print("3 EAST");
+
+state="north_exit";
+
+}
+else{
+
+print("");
+print("YOU FIND A RAT.");
+
+print("1 LOOK");
+print("2 IGNORE");
+
+state="rat";
+}
+
+break;
+
+
+case "north_exit":
+
+if(a==="2"){
+endGame(
+"YOU TRIP OVER POISON. YOU DRINK IT. MESSAGE INSIDE SAYS YOU ARE A JERK."
+);
+}
+else{
+endGame("YOU ARE DEAD.");
+}
+
+break;
+
+
+case "rat":
+
+if(a==="2"){
+endGame("RAT BITES YOU. YOU ARE DEAD.");
+}
+else{
+
+print("");
+print("MESSAGE:");
+print('"YOU MUST GO TO THE VALLEY OF THE GOLDEN SEWAGE."');
+
+print("");
+
+print("1 VALLEY");
+print("2 SOUTH");
+print("3 EAST");
+
+state="rat_path";
+}
+
+break;
+
+
+case "rat_path":
+
+if(a==="3"){
+endGame(
+'SIGN SAYS: "YOU CANNOT WIN IF YOU GO NORTH FIRST."'
+);
+}
+else{
+endGame("YOU ARE DEAD.");
+}
+
+break;
+
+}
+
+}
+
+input.addEventListener(
+"keydown",
+e=>{
+if(e.key==="Enter"){
+submitAnswer();
+}
+}
+);
+
+restartGame();
+
+</script>
+
+</body>
+</html>
