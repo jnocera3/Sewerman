@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SEWERMAN 5: LOST IN TIME</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a0a;
+  color: #33ff33;
+  font-family: 'Courier New', 'Courier', monospace;
+  font-size: 15px;
+  line-height: 1.45;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+#game {
+  width: 820px;
+  max-width: 96vw;
+  height: 96vh;
+  max-height: 96vh;
+  background: #111;
+  border: 2px solid #33ff33;
+  border-radius: 6px;
+  padding: 16px 20px 12px 20px;
+  display: flex;
+  flex-direction: column;
+}
+#output {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  min-height: 200px;
+  padding: 12px 14px;
+  background: #0d0d0d;
+  border: 1px solid #222;
+  margin-bottom: 10px;
+  scroll-behavior: smooth;
+}
+#output::-webkit-scrollbar {
+  width: 6px;
+}
+#output::-webkit-scrollbar-track {
+  background: #0d0d0d;
+}
+#output::-webkit-scrollbar-thumb {
+  background: #33ff33;
+  border-radius: 3px;
+}
+#input-area {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  padding: 4px 0;
+}
+#prompt {
+  color: #33ff33;
+  white-space: pre;
+  flex-shrink: 0;
+}
+#input {
+  flex: 1;
+  background: #0d0d0d;
+  border: 1px solid #33ff33;
+  color: #33ff33;
+  font-family: 'Courier New', 'Courier', monospace;
+  font-size: 15px;
+  padding: 6px 10px;
+  outline: none;
+}
+#input:focus {
+  border-color: #66ff66;
+  box-shadow: 0 0 4px rgba(51,255,51,0.3);
+}
+.btn-choice {
+  display: block;
+  background: none;
+  border: 1px solid #33ff33;
+  color: #33ff33;
+  font-family: 'Courier New', 'Courier', monospace;
+  font-size: 14px;
+  padding: 5px 12px;
+  margin: 5px 0;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: background 0.15s, color 0.15s;
+}
+.btn-choice:hover:not(:disabled) {
+  background: #33ff33;
+  color: #000;
+}
+.btn-choice:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+#title {
+  text-align: center;
+  color: #33ff33;
+  font-weight: bold;
+  font-size: 16px;
+  flex-shrink: 0;
+  margin-bottom: 6px;
+}
+.sep {
+  border: none;
+  border-top: 1px solid #33ff33;
+  opacity: 0.4;
+  margin: 4px 0 10px 0;
+  flex-shrink: 0;
+}
+.dead {
+  color: #ff3333;
+}
+.win {
+  color: #ffff33;
+}
+#undo-btn {
+  flex-shrink: 0;
+  background: none;
+  border: 1px solid #555;
+  color: #888;
+  font-family: 'Courier New', 'Courier', monospace;
+  font-size: 12px;
+  padding: 6px 8px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  user-select: none;
+}
+#undo-btn:hover:not(:disabled) {
+  background: #33ff33;
+  color: #000;
+  border-color: #33ff33;
+}
+#undo-btn:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+</style>
+</head>
+<body>
+<div id="game">
+  <div id="title">SEWERMAN 5: LOST IN TIME</div>
+  <hr class="sep">
+  <div id="output"></div>
+  <div id="input-area" style="display:none;">
+    <span id="prompt">&gt;</span>
+    <input type="text" id="input" autofocus spellcheck="false" autocomplete="off" />
+    <button id="undo-btn" disabled>⟲ UNDO</button>
+  </div>
+</div>
+<script>
+(function() {
+"use strict";
+
+// ===== GAME ENGINE =====
+const output = document.getElementById('output');
+const inputArea = document.getElementById('input-area');
+const inputField = document.getElementById('input');
+const promptEl = document.getElementById('prompt');
+
+let currentHandler = null;
+let waiting = false;
+let gameOver = false;
+
+// Undo system
+var undoStack = [];
+var currentOptions = null;
+var undoBtn = document.getElementById('undo-btn');
+
+function pushUndoPoint() {
+  undoStack.push({
+    html: output.innerHTML,
+    scrollTop: output.scrollTop,
+    options: currentOptions
+  });
+  undoBtn.disabled = false;
+}
+
+function undo() {
+  if (undoStack.length === 0) return;
+  var state = undoStack.pop();
+  if (undoStack.length === 0) undoBtn.disabled = true;
+  output.innerHTML = state.html;
+  output.scrollTop = state.scrollTop;
+  waiting = false;
+  currentHandler = null;
+  removeChoices();
+  inputArea.style.display = 'none';
+  if (state.options) {
+    currentOptions = state.options;
+    restoreChoices(state.options);
+  }
+}
+
+function restoreChoices(options) {
+  inputArea.style.display = 'flex';
+  promptEl.textContent = 'ENTER CHOICE: ';
+  waiting = true;
+  currentHandler = function(val) {
+    var num = parseInt(val.trim(), 10);
+    if (!isNaN(num) && num >= 1 && num <= options.length) {
+      selectOption(options[num - 1]);
+    }
+  };
+  var container = document.createElement('div');
+  container.id = 'choices';
+  options.forEach(function(opt) {
+    var btn = document.createElement('button');
+    btn.className = 'btn-choice';
+    btn.textContent = opt.label;
+    btn.addEventListener('click', function() {
+      selectOption(opt);
+    });
+    container.appendChild(btn);
+  });
+  output.appendChild(container);
+  output.scrollTop = output.scrollHeight;
+  setTimeout(function() { inputField.focus(); }, 50);
+}
+
+undoBtn.addEventListener('click', undo);
+
+function clear() {
+  output.innerHTML = '';
+  gameOver = false;
+}
+
+function print(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  output.appendChild(div);
+  output.scrollTop = output.scrollHeight;
+}
+
+function printDead(text) {
+  const div = document.createElement('div');
+  div.className = 'dead';
+  div.textContent = text;
+  output.appendChild(div);
+  output.scrollTop = output.scrollHeight;
+}
+
+function printWin(text) {
+  const div = document.createElement('div');
+  div.className = 'win';
+  div.textContent = text;
+  output.appendChild(div);
+  output.scrollTop = output.scrollHeight;
+}
+
+function blank() {
+  print('');
+}
+
+function hr() {
+  const div = document.createElement('div');
+  div.textContent = '----------------------------------------------------------';
+  div.style.opacity = '0.5';
+  output.appendChild(div);
+  output.scrollTop = output.scrollHeight;
+}
+
+function showPrompt(text, callback) {
+  promptEl.textContent = text;
+  inputArea.style.display = 'flex';
+  inputField.value = '';
+  waiting = true;
+  currentHandler = callback;
+  setTimeout(function() { inputField.focus(); }, 50);
+}
+
+function selectOption(opt) {
+  // Save undo point before transitioning
+  pushUndoPoint();
+  var c = document.getElementById('choices');
+  if (c) { c.querySelectorAll('button').forEach(function(b) { b.disabled = true; }); }
+  waiting = false;
+  currentHandler = null;
+  inputArea.style.display = 'none';
+  if (opt.next) { goTo(opt.next); }
+  else if (opt.handler) { opt.handler(); }
+}
+
+function showChoices(options) {
+  currentOptions = options;
+  inputArea.style.display = 'flex';
+  promptEl.textContent = 'ENTER CHOICE: ';
+  waiting = true;
+  currentHandler = function(val) {
+    var num = parseInt(val.trim(), 10);
+    if (!isNaN(num) && num >= 1 && num <= options.length) {
+      selectOption(options[num - 1]);
+    }
+    // invalid input — do nothing, let them try again
+  };
+  var container = document.createElement('div');
+  container.id = 'choices';
+  options.forEach(function(opt, i) {
+    var btn = document.createElement('button');
+    btn.className = 'btn-choice';
+    btn.textContent = opt.label;
+    btn.addEventListener('click', function() {
+      selectOption(opt);
+    });
+    container.appendChild(btn);
+  });
+  output.appendChild(container);
+  output.scrollTop = output.scrollHeight;
+  setTimeout(function() { inputField.focus(); }, 50);
+}
+
+function removeChoices() {
+  var c = document.getElementById('choices');
+  if (c) { c.remove(); }
+}
+
+function goTo(nodeId) {
+  if (gameOver) return;
+  removeChoices();
+  inputArea.style.display = 'none';
+  waiting = false;
+  currentHandler = null;
+  var node = nodes[nodeId];
+  if (node) {
+    node();
+  } else {
+    print('ERROR: Unknown node "' + nodeId + '"');
+  }
+}
+
+function restart() {
+  undoStack = [];
+  undoBtn.disabled = true;
+  goTo('start');
+}
+
+function showPlayAgain() {
+  showChoices([
+    { label: '1 - YES, PLAY AGAIN', handler: function() { restart(); } },
+    { label: '2 - NO',              handler: function() { /* end */ } }
+  ]);
+}
+
+inputField.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && currentHandler && waiting) {
+    var val = inputField.value;
+    inputField.value = '';
+    currentHandler(val);
+  }
+  // Undo: press 'u' when input is empty, or Ctrl+Z
+  if ((e.key === 'u' && inputField.value === '' && waiting) ||
+      (e.key === 'z' && (e.ctrlKey || e.metaKey))) {
+    e.preventDefault();
+    undo();
+  }
+});
+
+// ===== GAME NODES =====
+var nodes = {};
+
+nodes['start'] = function() {
+  clear();
+  print('              SEWERMAN 5: LOST IN TIME');
+  hr();
+  blank();
+  print('YOU ARE WANDERING THE SEWERS, WHEN YOU COME ACROSS A TIME WARP.');
+  print('YOU ARE INSTANTLY SUCKED INTO IT.');
+  blank();
+  print('YOU FIND YOURSELF IN A MOAT IN FRONT OF A CASTLE.');
+  print('THERE IS SOMETHING ELSE IN THE WATER WITH YOU. IT IS MONSTER.');
+  showChoices([
+    { label: '1 - YES (FEED THE MONSTER)', next: 'feedMonster' },
+    { label: '2 - NO',                     next: 'dontFeed' },
+  ]);
+};
+
+nodes['feedMonster'] = function() {
+  clear();
+  printDead('YOU MAKE A GOOD SNACK FOR THE MONSTER. DEAD.');
+  blank();
+  showPlayAgain();
+};
+
+// ----- NOT FEED -> SKELETON -----
+nodes['dontFeed'] = function() {
+  clear();
+  print('INSTEAD OF FEEDING THE MONSTER YOU GIVE HIM A FLYING UNDERWATER');
+  print('SEWERMAN KICK. WHEN THE MONSTER IS HIT BY THE KICK, HE DIES INSANTLY');
+  blank();
+  print('YOU WALK THROUGH THE CASTLE DOOR AND SOON DISCOVER THAT THE CASTLE');
+  print('IS VERY SCARY. AS YOU ROUND THE CORNER YOU SEE A HUGE SKELETON WITH');
+  print('A SWORD COMING AT YOU. WHAT DO YOU WANT TO DO?');
+  blank();
+  showChoices([
+    { label: '1 - UNLEASH A POWERFUL SEWERMAN FART',          next: 'skel1' },
+    { label: '2 - GIVE HIM A FLYING SEWERMAN KICK',           next: 'skel2' },
+    { label: '3 - PULL OUT ONE OF HIS BONES',                 next: 'skel3' },
+    { label: '4 - BOCK LIKE A CHICKEN',                       next: 'skel4' },
+  ]);
+};
+
+nodes['skel1'] = function() {
+  clear();
+  printDead('A SEWERMAN FART IS A GOOD CHOICE, BUT IT DOES NOT WORK AGAINST');
+  printDead('THE SKELETON. HE CHOPS YOU UP WITH HIS SWORD. YOU ARE DEAD.');
+  blank();
+  showPlayAgain();
+};
+
+nodes['skel2'] = function() {
+  clear();
+  printDead('THE SKELETON SEES YOU COMING AND HE DRIVES HIS SWORD DEEP INTO');
+  printDead('YOUR SLUDGE FILLED BODY. YOU ARE DEAD.');
+  blank();
+  showPlayAgain();
+};
+
+nodes['skel3'] = function() {
+  clear();
+  printDead('YOU ARE ABLE TO PULL OUT ONE OF THE SKELETON\'S BONES, BUT IT');
+  printDead('HAS NO EFFECT ON HIM. HE CHOPS YOU UP WITH HIS SWORD. YOU ARE DEAD.');
+  blank();
+  showPlayAgain();
+};
+
+nodes['skel4'] = function() {
+  clear();
+  print('YOU START MAKING CHICKEN NOISES AND AT THAT INSTANT THE SKELETON');
+  print('BREAKS INTO HUNDREDS OF PIECES. YOU HAVE BEATEN THE SKELETON.');
+  blank();
+  print('YOU NOW SEE A BRIGHT LIGHT COMING FROM A ROOM UP AHEAD. DO YOU');
+  print('WISH TO INVESTIGATE THE LIGHT?');
+  blank();
+  showChoices([
+    { label: '1 - YES', next: 'investigateYes' },
+    { label: '2 - NO',  next: 'investigateNo' },
+  ]);
+};
+
+nodes['investigateNo'] = function() {
+  clear();
+  printDead('SKELETON WAS NOT DEAD. HE COMES BACK AND CHOPS YOU UP.');
+  blank();
+  showPlayAgain();
+};
+
+// ----- INVESTIGATE LIGHT -> GOLDEN AXE -----
+nodes['investigateYes'] = function() {
+  clear();
+  print('YOU MOVE CLOSER TO THE LIGHT AND DISCOVER IT TO BE THE SUN SHINING');
+  print('OFF A GOLDEN AXE. DO YOU WISH TO TAKE THE AXE?');
+  blank();
+  showChoices([
+    { label: '1 - YES', next: 'takeAxe' },
+    { label: '2 - NO',  next: 'dontTakeAxe' },
+  ]);
+};
+
+// ----- DON'T TAKE AXE -> DWARF -----
+nodes['dontTakeAxe'] = function() {
+  clear();
+  print('YOU DECIDE TO LEAVE THE ROOM AND LEAVE THE AXE. AS YOU ARE LEAVING');
+  print('THE ROOM YOU COLLIDE WITH A MAN. THE MAN SAYS EXCUSE ME. THE MAN');
+  print('WALKS INTO THE ROOM GETS THE AXE AND LEAVES. YOU THINK ABOUT THIS');
+  print('FOR AWILE AND SOON DECIDE THAT IT DOES NOT MATTER. YOU LEAVE');
+  print('THE CASTLE AND WALK AROUND. AFTER MANY HOURS OF WALKING AIMLESSLY');
+  print('YOU COLLAPSE IN FATIGUE. YOU FALL INTO A DEEP SLEEP. YOU AWAKE TO');
+  print('FIND YOURSELF BEING POKED BY A DWARF. YOU TELL HIM TO GET OUT OF HERE,');
+  print('BUT HE IGNORES YOU. WHAT DO YOU WANT TO DO TO HIM?');
+  blank();
+  showChoices([
+    { label: '1 - GIVE HIM A BOOT',            next: 'dwarfBoot' },
+    { label: '2 - EAT HIM',                    next: 'dwarfEat' },
+    { label: '3 - FART IN HIS FACE',           next: 'dwarfFart' },
+  ]);
+};
+
+nodes['dwarfEat'] = function() {
+  clear();
+  printDead('YOU GRAB THE DWARF AND BITE HIS HEAD OFF. YOU THEN EAT THE REST');
+  printDead('OF HIS BODY. AFTER ABOUT 10 MINUTES, YOU BLOW UP. YOU ARE DEAD.');
+  blank();
+  showPlayAgain();
+};
+
+nodes['dwarfFart'] = function() {
+  clear();
+  printDead('YOU LET OUT A BIG HOT FART IN HIS FACE. AT THAT INSTANT THE DWARF');
+  printDead('DIES FROM THE INTENSE SMELL. SACONDS LATER THE SMELL HITS YOU AND');
+  printDead('YOU CAN\'T TAKE IT EITHER. YOU DIE.');
+  blank();
+  showPlayAgain();
+};
+
+nodes['dwarfBoot'] = function() {
+  clear();
+  print('YOU KICK HIM AND A LITTLE BOTTLE LABELED MAGIC DROPS TO THE');
+  print('GROUND. THE DWARF RUNS OFF AND YOU PICK UP THE BOTTLE. AT THAT');
+  print('INSTANT A MONSTER COMES. WHAT DO YOU WANT TO DO?');
+  blank();
+  showChoices([
+    { label: '1 - DRINK THE BOTTLE OF MAGIC',       next: 'drinkBottle' },
+    { label: '2 - THROW THE BOTTLE AT THE MONSTER', next: 'throwBottle' },
+  ]);
+};
+
+nodes['throwBottle'] = function() {
+  clear();
+  printDead('YOU THROW BOTTLE AT MONSTER, BUT IT HAS NO AFFECT ON');
+  printDead('HIM. THE MONSTER EATS YOU. YOU ARE DEAD.');
+  blank();
+  showPlayAgain();
+};
+
+nodes['drinkBottle'] = function() {
+  clear();
+  printDead('YOU DRINK THE BOTTLE OF MAGIC. IN A MATTER OF SECONDS YOU EXPLODE.');
+  printDead('YOUR SLUDGE FILLED BODY GOES EVERYWHERE. YOU KILL THE MONSTER.');
+  printDead('YOU ALSO KILL YOURSELF.');
+  blank();
+  showPlayAgain();
+};
+
+// ----- TAKE AXE -> TARIK -----
+nodes['takeAxe'] = function() {
+  clear();
+  print('YOU PULL THE AXE OUT OF THE GROUND AND AT THAT INSTANT A');
+  print('MAN APPEARS. HE SAYS HIS NAME IS TARIK AND HE HAS COME');
+  print('TO GET THE AXE AND RESTORE TRANQUILITY TO YURIA. HE TELLS');
+  print('YOU NOT TO RESIST HIM OR HE WILL ATTACK. DO YOU WISH TO');
+  print('FIGHT TARIK?');
+  blank();
+  showChoices([
+    { label: '1 - YES', next: 'fightTarik' },
+    { label: '2 - NO',  next: 'noFightTarik' },
+  ]);
+};
+
+nodes['fightTarik'] = function() {
+  clear();
+  printDead('YOU ARE NO MATCH FOR TARIK. YOU ARE DEAD.');
+  blank();
+  showPlayAgain();
+};
+
+nodes['noFightTarik'] = function() {
+  clear();
+  print('TARIK THANKS YOU FOR GIVING HIM THE AXE. HE ALSO SAYS HE HAS');
+  print('SOME INFORMATION ABOUT A LOST PEARL. DO YOU WISH TO HEAR THE INFORMATION?');
+  blank();
+  showChoices([
+    { label: '1 - YES', next: 'hearInfo' },
+    { label: '2 - NO',  next: 'dontHearInfo' },
+  ]);
+};
+
+// ===== HEAR INFO (F=1) =====
+nodes['hearInfo'] = function() {
+  clear();
+  print('TARIK SAYS, "I HAVE BEEN TALKING TO A WIZARD AND HE HAS TOLD');
+  print('ME THAT A MAGICAL PEARL EXISTS. HE TELLS ME THAT IT CAN BE FOUND');
+  print('IN THE TIME OF THE DINOSAURS. HE TELLS ME OF THE GREAT DANGER');
+  print('THE PEARL POSSESSES IF PLACED IN THE WRONG HANDS. THIS IS WHY');
+  print('WE NEED A GREAT WARRIOR TO JOURNEY BACK IN TIME TO FIND THE PEARL.');
+  print('SINCE I SAW YOU COME THROUGH THE TIME WARP, I KNOW YOUR BODY CAN');
+  print('WITHSTAND TIME TRAVEL. SO I WAS HOPING THAT YOU COULD BE THE GREAT WARRIOR');
+  print('WHO CAN FIND THE MAGICAL PEARL AND DESTROY IT SO IT WILL NOT FALL INTO');
+  print('THE WRONG HANDS. THE WIZARD TELLS ME THAT IF THE PEARL IS NOT DESTROYED');
+  print('IN THE TIME OF THE DINOSAURS THEN IT WILL BE FOUND IN THE YEAR 1993.');
+  print('THE WIZARD SAYS IT WILL THEN BE PLACED IN THE WRONG HANDS AND THE');
+  print('WORLD WILL BE DESTROYED." DO YOU WANT TO HELP THE WIZARD AND TARIK');
+  print('FIND THE PEARL?');
+  blank();
+  showChoices([
+    { label: '1 - YES', next: 'helpYes' },
+    { label: '2 - NO',  next: 'helpNo' },
+  ]);
+};
+
+nodes['helpNo'] = function() {
+  clear();
+  print('YOU LIVE THE REST OF YOUR LIFE WANDERING TARIK\'S WORLD.');
+  blank();
+  printWin('- THE END -');
+  blank();
+  showPlayAgain();
+};
+
+// ----- HELP YES -> JOURNEY -----
+nodes['helpYes'] = function() {
+  clear();
+  print('TARIK SAYS HE IS HAPPY WITH YOUR CHOICE TO HELP HIM. HE GIVES YOU A');
+  print('MAP WHICH LEADS TO THE TALKING TREE. THE TALKING TREE IS WHERE THE TIME');
+  print('WARP LIES. HE ALSO GIVES YOU 3 BOTTLES OF MAGIC AND A SWORD. HE TELLS');
+  print('TO BE CAREFUL ON YOUR JOURNEY AND TO USE YOUR MAGIC WISELY.');
+  blank();
+  print('YOU SET OFF ON YOUR JOURNEY TO THE TALKING TREE. YOU WALK ALONG QUICKLY.');
+  print('AFTER MANY HOURS OF WALKING YOU COME ACROSS A FORK IN THE ROAD. THE');
+  print('FORK IS NOT ON THE MAP. THERE IS A SIGN. THE SIGN SAYS GO LEFT TO GO TO');
+  print('THE TALKING TREE. IT SAYS GO RIGHT TO MEET YOUR DEATH. WHICH DIRECTION');
+  print('DO YOU WISH TO GO?');
+  blank();
+  showChoices([
+    { label: '1 - GO LEFT',  next: 'forkLeft' },
+    { label: '2 - GO RIGHT', next: 'forkRight' },
+  ]);
+};
+
+// ----- FORK LEFT -> 2 MEN -----
+nodes['forkLeft'] = function() {
+  clear();
+  print('YOU TURN LEFT AND IMMEDIATELY 2 MEN WITH SWORDS COME RUNNING AT YOU.');
+  print('WHAT DO YOU WANT TO DO?');
+  blank();
+  showChoices([
+    { label: '1 - USE 1 BOTTLE OF MAGIC', next: 'left2men1' },
+    { label: '2 - USE 2 BOTTLES OF MAGIC', next: 'left2men2' },
+    { label: '3 - USE 3 BOTTLES OF MAGIC', next: 'left2men3' },
+    { label: '4 - USE YOUR SWORD',         next: 'left2men4' },
+  ]);
+};
+
+nodes['left2men1'] = function() {
+  clear();
+  printDead('1 BOTTLE OF MAGIC HAS NO AFFECT ON THEM. THEY CHOP YOU UP.');
+  printDead('YOU ARE DEAD.');
+  blank();
+  showPlayAgain();
+};
+
+nodes['left2men2'] = function() {
+  clear();
+  printDead('2 BOTTLES OF MAGIC HAS NO AFFECT ON THEM. THEY CHOP YOU UP.');
+  printDead('YOU ARE DEAD.');
+  blank();
+  showPlayAgain();
+};
+
+nodes['left2men4'] = function() {
+  clear();
+  printDead('YOU DO NOT KNOW HOW TO USE YOUR SWORD BUT THE 2 MEN KNOW HOW');
+  printDead('TO USE THERE SWORDS. THEY CHOP YOU UP. YOU ARE DEAD.');
+  blank();
+  showPlayAgain();
+};
+
+nodes['left2men3'] = function() {
+  clear();
+  print('YOU TAKE OUT ALL YOUR BOTTLES OF MAGIC. YOU THROW THEM AT THE 2');
+  print('MEN. THE MEN COLLAPSE TO THE GROUND WHEN THEY ARE HIT BY THE MAGIC');
+  print('THEY ARE DEAD.');
+  blank();
+  showChoices([
+    { label: '1 - CONTINUE', handler: function() {
+      clear();
+      printDead('YOU WALK A LITTLE FURTHER AND 2 MORE MEN COME AT YOU WITH SWORDS');
+      printDead('YOUR ONLY WEAPON NOW IS YOUR SWORD. YOU DO NOT KNOW HOW TO USE YOUR');
+      printDead('SWORD. THE 2 MEN KNOW HOW TO USE THERE SWORDS. THEY CHOP YOU UP.');
+      printDead('YOU ARE DEAD.');
+      blank();
+      showPlayAgain();
+    }}
+  ]);
+};
+
+// ----- FORK RIGHT -> MONSTER -----
+nodes['forkRight'] = function() {
+  clear();
+  print('YOU TURN RIGHT AND AFTER MANY HOURS OF WALKING YOU DISCOVER THAT THE');
+  print('PATHWAY MATCHES UP WITH THE MAP. YOU CONTINUE WALKING UNTIL YOU SEE A');
+  print('MONSTER BLOCKING THE PATH. THE MONSTER LOOKS LIKE HE IS READY TO ATTACK.');
+  print('DO YOU WISH TO DO BATTLE WITH THE MONSTER?');
+  blank();
+  showChoices([
+    { label: '1 - YES', next: 'monsterBattle' },
+    { label: '2 - NO',  next: 'monsterNoBattle' },
+  ]);
+};
+
+nodes['monsterBattle'] = function() {
+  clear();
+  print('YOU EASILY KILL THE MONSTER. YOU KILL HIM WITH YOUR SWORD.');
+  blank();
+  goTo('afterMonster');
+};
+
+nodes['monsterNoBattle'] = function() {
+  clear();
+  print('YOU AND THE MONSTER JUST STAND THERE LOOKING AT EACH OTHER FOR 10 MINUTES.');
+  print('FINALLY THE MONSTER SAYS, "TARIK HAS SENT ME TO TELL YOU THE SECRET NUMBER');
+  print('WHICH WILL OPEN THE TIME WARP IN THE TALKING TREE. THE NUMBER IS 452."');
+  print('YOU THANK THE MONSTER.');
+  blank();
+  goTo('afterMonster');
+};
+
+// ----- AFTER MONSTER -> MAN WITH SWORD -----
+nodes['afterMonster'] = function() {
+  print('YOU CONTINUE ALONG THE PATHWAY. EVENTUALLY THE PATHWAY REACHES THE WOODS.');
+  print('IN THESE WOODS YOU WILL FIND THE TALKING TREE.');
+  print('YOU CONTINUE WALKING AND EVENTUALLY COME UPON A MAN WITH A SWORD.');
+  print('WHAT DO YOU WANT TO DO?');
+  blank();
+  showChoices([
+    { label: '1 - ATTACK HIM WITH YOUR SWORD',          next: 'manSword1' },
+    { label: '2 - ATTACK HIM WITH 1 BOTTLE OF MAGIC',   next: 'manSword2' },
+    { label: '3 - ATTACK HIM WITH 2 BOTTLES OF MAGIC',  next: 'manSword3' },
+    { label: '4 - ATTACK HIM WITH 3 BOTTLES OF MAGIC',  next: 'manSword4' },
+    { label: '5 - STAND THERE AND WAIT TO SEE WHAT HE DOES', next: 'manSword5' },
+  ]);
+};
+
+nodes['manSword2'] = function() {
+  clear();
+  printDead('THE MAGIC HAS NO AFFECT ON HIM. HE CHARGES YOU WITH HIS SWORD');
+  printDead('AND DRIVES IT DEEP INTO YOUR SLUDGE-FILLED BODY. YOU ARE DEAD.');
+  blank();
+  showPlayAgain();
+};
+
+nodes['manSword3'] = function() {
+  clear();
+  printDead('THE MAGIC HAS NO AFFECT ON HIM. HE TAKES HIS SWORD AND THROWS IT');
+  printDead('DEEP INTO YOUR SLUDGE-FILLED BODY. YOU ARE DEAD.');
+  blank();
+  showPlayAgain();
+};
+
+nodes['manSword4'] = function() {
+  clear();
+  printDead('THE MAGIC HAS NO AFFECT ON HIM. HE STARTS LAUGHING AND THEN HE CHOPS');
+  printDead('YOUR HEAD OFF. YOU ARE DEAD.');
+  blank();
+  showPlayAgain();
+};
+
+nodes['manSword5'] = function() {
+  clear();
+  printDead('YOU JUST STAND THERE. HE TAKES HIS SWORD AND CHOPS YOU INTO HUNDREDS');
+  printDead('OF PIECES. YOU ARE DEAD.');
+  blank();
+  showPlayAgain();
+};
+
+nodes['manSword1'] = function() {
+  clear();
+  print('YOU CHARGE HIM WITH YOUR SWORD. HE SEES YOU COMING AND HE TRIPS YOU.');
+  print('YOUR SWORD GOES FLYING INTO THE AIR AND AFTER A FEW SECONDS LANDS ON');
+  print('THE MAN\'S HEAD. HE IS DEAD. YOU CONTINUE THROUGH THE WOODS.');
+  blank();
+  print('AFTER MANY HOURS OF WALKING YOU SEE A BRIGHT LIGHT UP AHEAD. YOU MOVE CLOSER');
+  print('AND CLOSER TO THE LIGHT. EVENTUALLY YOU REACH THE LIGHT AND DISCOVER IT TO BE');
+  print('A TALKING TREE.');
+  goTo('talkingTree');
+};
+
+// ----- TALKING TREE -> SECRET NUMBER LOOP -----
+nodes['talkingTree'] = function() {
+  var askNumber = function() {
+    print('THE TREE SAYS, "TELL ME THE SECRET NUMBER IF YOU WISH TO DO TIME TRAVEL."');
+    showPrompt('ENTER THE SECRET NUMBER: ', function(val) {
+      var num = parseInt(val.trim(), 10);
+      blank();
+      if (num === 452) {
+        print('THE TREE OPENS AND ON THE INSIDE THERE IS A HUGE TIME WARP. YOU GET INTO');
+        print('THE TIME WARP. YOU AWAKE TO FIND YOURSELF IN A WORLD OF DINOSUARS.');
+        print('AS YOU STAND UP YOU REALIZE YOU ARE SURROUNDED BY CAVEMEN. THEY ARE');
+        print('STARING AT YOU. ONE CAVEMAN STEPS FORWARD AND SAYS, "OOGA BOOGA."');
+        print('LUCKILY YOU BROUGHT ALONG YOUR TRUSTY CAVEMAN LANGUAGE TRANSLATOR.');
+        print('YOU ARE ABLE TO DETERMINE THAT THE CAVEMAN SAID HELLO. HE ALSO ASKS');
+        print('HOW YOU GOT HERE AND WHAT YOU ARE LOOKING FOR. WHEN YOU TELL HIM YOU');
+        print('ARE LOOKING FOR A MAGICAL PEARL HE BACKS AWAY AND TELLS THE REST OF THE');
+        print('CAVEMEN TO KILL YOU. WHAT DO YOU WANT TO DO?');
+        blank();
+        showChoices([
+          { label: '1 - ATTACK THEM WITH YOUR SWORD',                 next: 'caveman1' },
+          { label: '2 - USE SOME OF YOUR MAGIC',                     next: 'caveman2' },
+          { label: '3 - USE A POWERFUL SEWERMAN FART',               next: 'caveman3' },
+          { label: '4 - YELL "OOGA BOOGA" AT THE TOP OF YOUR LUNGS', next: 'caveman4' },
+        ]);
+      } else {
+        print('YOU ARE INCORRECT');
+        askNumber();
+      }
+    });
+  };
+  askNumber();
+};
+
+// ----- CAVEMEN -----
+nodes['caveman1'] = function() {
+  clear();
+  printDead('YOU SWING YOUR SWORD AROUND WITH ALL YOUR MIGHT. THE WEIGHT OF THE SWORD');
+  printDead('BECOMES TO MUCH FOR YOU AND YOU COLLAPSE. THE CAVEMEN POND YOU WITH THERE');
+  printDead('CLUBS. YOU ARE DEAD.');
+  blank();
+  showPlayAgain();
+};
+
+nodes['caveman3'] = function() {
+  clear();
+  printDead('YOU LET OUT A HOT STEAMING SEWERMAN FART. THE CAVEMEN BREATH IT IN DEEPLY.');
+  printDead('THEY SEEM TO LIKE THE SMELL, BUT YOU DO NOT. YOU BREATH IT IN AND THEN');
+  printDead('COLLAPSE TO THE GROUND. YOU ARE DEAD.');
+  blank();
+  showPlayAgain();
+};
+
+nodes['caveman4'] = function() {
+  clear();
+  printDead('YOU YELL "OOGA BOOGA" AT THE TOP OF YOUR LUNGS. WHILE YOUR YELLING THE');
+  printDead('CAVEMEN ARE PONDING ON YOU. YOU ARE BEATEN INTO A SLUDGE BALL. YOU ARE DEAD.');
+  blank();
+  showPlayAgain();
+};
+
+nodes['caveman2'] = function() {
+  clear();
+  print('HOW MANY BOTTLES OF MAGIC DO YOU WANT TO USE?');
+  blank();
+  showChoices([
+    { label: '1 - 1 BOTTLE',  next: 'caveMagic1' },
+    { label: '2 - 2 BOTTLES', next: 'caveMagic2' },
+    { label: '3 - 3 BOTTLES', next: 'caveMagic3' },
+  ]);
+};
+
+nodes['caveMagic2'] = function() {
+  clear();
+  printDead('YOU THROW TOO MANY BOTTLES OF MAGIC. THE MAGIC DESTROYS THE CAVEMEN AND');
+  printDead('IT ALSO DESTROYS YOU. YOU ARE DEAD.');
+  blank();
+  showPlayAgain();
+};
+
+nodes['caveMagic3'] = function() {
+  clear();
+  printDead('YOU THROW TOO MANY BOTTLES OF MAGIC. THE MAGIC DESTROYS THE CAVEMEN AND');
+  printDead('IT ALSO DESTROYS YOU. YOU ARE DEAD.');
+  blank();
+  showPlayAgain();
+};
+
+nodes['caveMagic1'] = function() {
+  clear();
+  print('1 BOTTLE OF MAGIC IS JUST ENOUGH TO KILL ALL THE CAVEMEN. YOU THEN DECIDE');
+  print('TO FRISK THE CAVEMEN. YOU FIND A PIECE OF PAPER CRUMBLED UP IN A CAVEMAN\'S');
+  print('SHOE. THE PAPER SAYS, "BE SURE TO PICK UP COPIES OF SEWERMAN\'S 1,2,3, AND');
+  print('4 AT YOUR LOCAL COMPUTER ROOM." IT ALSO SAYS THAT YOU MUST FIND THE WISE OLD');
+  print('CAVEMAN. HE WILL LEAD YOU TO THE MAGICAL PEARL. IT ALSO SAYS FOLLOW THE BLUE');
+  print('PATHWAY WHICH LIES IN FRONT OF YOU. THE PATHWAY LEADS TO THE OLD CAVEMAN\'S');
+  print('CAVE. HOWEVER THE PATH IS BROKEN INTO 2 PARTS. ONE PART GOES RIGHT THE OTHER');
+  print('GOES LEFT. WHICH WAY DO YOU WANT TO GO?');
+  blank();
+  showChoices([
+    { label: '1 - GO LEFT',  next: 'bluePath' },
+    { label: '2 - GO RIGHT', next: 'bluePath' },
+  ]);
+};
+
+nodes['bluePath'] = function() {
+  clear();
+  print('YOU FOLLOW THE PATH...');
+  blank();
+  printWin('TO BE CONTINUED...');
+  printWin('(THE STORY CONTINUES IN SEWERMAN 6!)');
+  blank();
+  showPlayAgain();
+};
+
+// ===== DON'T HEAR INFO (F=2) -> JAPANESE SUB =====
+nodes['dontHearInfo'] = function() {
+  clear();
+  print('TARIK THROWS YOU OUT OF THE ROOM AND YOU GO FLYING BACKWARDS');
+  print('INTO ANOTHER TIME WARP.');
+  blank();
+  print('YOU AWAKE TO FIND YOURSELF ON A JAPANESE SUBMARINE IN WORLD WAR II.');
+  print('THERE ARE A BUNCH OF MEN ON BOARD AND THEY ARE ALL TALKING');
+  print('JAPANESE. YOU DO NOT UNDERSTAND THEM. BUT LUCKILY YOU BROUGHT');
+  print('ALONG YOUR TRUSTY SEWERMAN LANGUAGE TRANSLATOR. YOU CAN NOW');
+  print('UNDERSTAND EVERYTHING THEY ARE SAYING. YOU HEAR THE CAPTAIN');
+  print('SAY, "LETS SINK US AMERICAN SHIP. I BET 20 DOLLAR I CAN SINK');
+  print('SHIP WITH ONE TORPEDO." JUST AS THE CAPTAIN MUTTERS');
+  print('HIS LAST WORD ALL THE JAPANESE MEN NOTICE YOU. AT THAT INSTANT');
+  print('THEY ALL HOLD THERE NOSE AND BACK AWAY.');
+  print('WHAT DO YOU WANT TO DO?');
+  blank();
+  showChoices([
+    { label: '1 - SPIN LIKE A TORNADO AND GIVE THEM A SLUDGE BATH',       next: 'sub1' },
+    { label: '2 - START CRYING',                                           next: 'sub2' },
+    { label: '3 - BET AGAINST THE CAPTAIN',                               next: 'sub3' },
+    { label: '4 - USE YOUR ULTIMATE SEWERMAN FART AND KICK ATTACK',       next: 'sub4' },
+    { label: '5 - HELP THEM SINK AN AMERICAN SHIP',                       next: 'sub5' },
+  ]);
+};
+
+nodes['sub1'] = function() {
+  clear();
+  printDead('YOU START TO SPIN IN A CIRCLE. THE JAPANESE MEN GET COVERED');
+  printDead('WITH SEWAGE. THEY GET MAD AT YOU AND THEN THEY KILL YOU. YOU');
+  printDead('ARE DEAD.');
+  blank();
+  showPlayAgain();
+};
+
+nodes['sub2'] = function() {
+  clear();
+  printDead('WHEN YOU START CRYING THE JAPANESE MEN START LAUGHING. THEY');
+  printDead('DECIDE TO USE YOU HAS A WEAPON AGAINST THE AMERICAN SHIPS.');
+  printDead('THEY PUT YOU IN A TORPEDO SHAFT AND LAUNCH YOU AT THE AMERICAN');
+  printDead('SHIP AND WHEN YOU HIT THE SHIP YOU ARE SMUSHED UP INTO A SLUDGE BALL');
+  printDead('YOU ARE DEAD.');
+  blank();
+  showPlayAgain();
+};
+
+nodes['sub3'] = function() {
+  clear();
+  printDead('YOU INTRODUCE YOURSELF AS SEWERMAN. THE JAPANESE MEN GREET YOU');
+  printDead('HAPPILY. YOU THEN ANNOUNCE THAT YOU WILL BET AGAINST THE CAPTAIN.');
+  printDead('THE CAPTAIN HEARS THIS AND THEN HE GETS SORE. HE TELLS HIS MEN');
+  printDead('TO KILL YOU AND THEY DO. YOU ARE DEAD.');
+  blank();
+  showPlayAgain();
+};
+
+nodes['sub5'] = function() {
+  clear();
+  printDead('YOU INTRODUCE YOURSELF AS SEWERMAN. THE JAPANESE WELCOME YOU.');
+  printDead('YOU SAY YOU WOULD BE PROUD TO HELP THEM SINK AMERICAN SHIPS.');
+  printDead('THEY ACCEPT YOUR PROPOSAL AND YOU BECOME A CREW MEMBER. YOU');
+  printDead('LIVE FOR 15 MORE MINUTES. THE AMERICAN SHIPS DROP DEPTH CHARGES');
+  printDead('WHICH ARE SUCCESSFUL IN HITTING THE SUB AND SINKING IT. YOU');
+  printDead('ARE DEAD.');
+  blank();
+  showPlayAgain();
+};
+
+nodes['sub4'] = function() {
+  clear();
+  print('YOU IMMEDIATELY START FARTING AND KICKING. AFTER ABOUT 10 MINUTES');
+  print('OF WORK ALL THE JAPANESE MEN ON BOARD ARE DEAD.');
+  blank();
+  print('WHAT DO YOU WANT TO DO NOW?');
+  blank();
+  showChoices([
+    { label: '1 - SEND OUT AN S.O.S. TO THE AMERICAN SHIPS',  next: 'subWhat1' },
+    { label: '2 - FIRE ALL TORPEDOES AND HOPE SOMETHING GOOD HAPPENS', next: 'subWhat2' },
+    { label: '3 - DIVE.',                                      next: 'subWhat3' },
+    { label: '4 - GO TO THE SURFACE',                          next: 'subWhat4' },
+  ]);
+};
+
+nodes['subWhat1'] = function() {
+  clear();
+  printDead('THE AMERICAN SHIPS HEAR YOUR S.O.S. AND THEY COME TO HELP YOU.');
+  printDead('BUT WHEN THEY ARIVE THEY SEE YOU AND THEY THINK YOU ARE A');
+  printDead('JAPANESE SECRET WEAPON. THEY KILL YOU. YOU ARE DEAD.');
+  blank();
+  showPlayAgain();
+};
+
+nodes['subWhat2'] = function() {
+  clear();
+  printDead('YOU FIRE ALL TORPEDOES AND AT THAT INSTANT A MAN APPEARS.');
+  printDead('THE MAN SAYS YOU SHOULD HAVE LISTENED TO TARIK\'S INFORMATION.');
+  printDead('THE MAN SAYS YOU ARE A BUM. HE DECIDES TO KILL YOU. YOU ARE DEAD.');
+  blank();
+  showPlayAgain();
+};
+
+nodes['subWhat3'] = function() {
+  clear();
+  printDead('YOU DIVE AND DIVE AND DIVE SOMEMORE. EVENTUALLY THE SUB BLOWS');
+  printDead('UP FROM THE INTENSE PRESSURE. YOU ARE DEAD.');
+  blank();
+  showPlayAgain();
+};
+
+nodes['subWhat4'] = function() {
+  clear();
+  printDead('YOU GO TO THE SURFACE. THE AMERICAN BATTLESHIPS START FIRING');
+  printDead('YOUR SUB IS HIT. YOUR SUB SINKS. YOU ARE DEAD.');
+  blank();
+  showPlayAgain();
+};
+
+// ===== START =====
+goTo('start');
+
+})();
+</script>
+</body>
+</html>
