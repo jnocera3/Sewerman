@@ -8,7 +8,7 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
   background: #0a0a0a;
-  color: #33ff33;
+  color: #FFFFFF;
   font-family: 'Courier New', 'Courier', monospace;
   font-size: 15px;
   line-height: 1.45;
@@ -24,7 +24,7 @@ body {
   height: 96vh;
   max-height: 96vh;
   background: #111;
-  border: 2px solid #33ff33;
+  border: 2px solid #FFFFFF;
   border-radius: 6px;
   padding: 16px 20px 12px 20px;
   display: flex;
@@ -49,7 +49,7 @@ body {
   background: #0d0d0d;
 }
 #output::-webkit-scrollbar-thumb {
-  background: #33ff33;
+  background: #FFFFFF;
   border-radius: 3px;
 }
 #input-area {
@@ -60,29 +60,29 @@ body {
   padding: 4px 0;
 }
 #prompt {
-  color: #33ff33;
+  color: #FFFFFF;
   white-space: pre;
   flex-shrink: 0;
 }
 #input {
   flex: 1;
   background: #0d0d0d;
-  border: 1px solid #33ff33;
-  color: #33ff33;
+  border: 1px solid #FFFFFF;
+  color: #FFFFFF;
   font-family: 'Courier New', 'Courier', monospace;
   font-size: 15px;
   padding: 6px 10px;
   outline: none;
 }
 #input:focus {
-  border-color: #66ff66;
+  border-color: #FFFFFF;
   box-shadow: 0 0 4px rgba(51,255,51,0.3);
 }
 .btn-choice {
   display: block;
   background: none;
-  border: 1px solid #33ff33;
-  color: #33ff33;
+  border: 1px solid #FFFFFF;
+  color: #FFFFFF;
   font-family: 'Courier New', 'Courier', monospace;
   font-size: 14px;
   padding: 5px 12px;
@@ -93,7 +93,7 @@ body {
   transition: background 0.15s, color 0.15s;
 }
 .btn-choice:hover:not(:disabled) {
-  background: #33ff33;
+  background: #FFFFFF;
   color: #000;
 }
 .btn-choice:disabled {
@@ -102,7 +102,7 @@ body {
 }
 #title {
   text-align: center;
-  color: #33ff33;
+  color: #FFFFFF;
   font-weight: bold;
   font-size: 16px;
   flex-shrink: 0;
@@ -110,7 +110,7 @@ body {
 }
 .sep {
   border: none;
-  border-top: 1px solid #33ff33;
+  border-top: 1px solid #FFFFFF;
   opacity: 0.4;
   margin: 4px 0 10px 0;
   flex-shrink: 0;
@@ -134,9 +134,9 @@ body {
   user-select: none;
 }
 #undo-btn:hover:not(:disabled) {
-  background: #33ff33;
+  background: #FFFFFF;
   color: #000;
-  border-color: #33ff33;
+  border-color: #FFFFFF;
 }
 #undo-btn:disabled {
   opacity: 0.25;
@@ -152,7 +152,7 @@ body {
   <div id="input-area" style="display:none;">
     <span id="prompt">&gt;</span>
     <input type="text" id="input" autofocus spellcheck="false" autocomplete="off" />
-    <button id="undo-btn" disabled>⟲ UNDO</button>
+    <button id="undo-btn" disabled>⟲ GO BACK</button>
   </div>
 </div>
 <script>
@@ -201,7 +201,7 @@ function undo() {
 
 function restoreChoices(options) {
   inputArea.style.display = 'flex';
-  promptEl.textContent = 'ENTER CHOICE: ';
+  promptEl.textContent = 'CLICK CHOICE ABOVE OR ENTER HERE: ';
   waiting = true;
   currentHandler = function(val) {
     var num = parseInt(val.trim(), 10);
@@ -256,7 +256,7 @@ function printWin(text) {
 }
 
 function blank() {
-  print('');
+  print('\n');
 }
 
 function hr() {
@@ -291,7 +291,7 @@ function selectOption(opt) {
 function showChoices(options) {
   currentOptions = options;
   inputArea.style.display = 'flex';
-  promptEl.textContent = 'ENTER CHOICE: ';
+  promptEl.textContent = 'CLICK CHOICE ABOVE OR ENTER HERE: ';
   waiting = true;
   currentHandler = function(val) {
     var num = parseInt(val.trim(), 10);
@@ -367,14 +367,14 @@ var nodes = {};
 
 nodes['start'] = function() {
   clear();
-  print('              SEWERMAN 5: LOST IN TIME');
-  hr();
+
   blank();
   print('YOU ARE WANDERING THE SEWERS, WHEN YOU COME ACROSS A TIME WARP.');
   print('YOU ARE INSTANTLY SUCKED INTO IT.');
   blank();
   print('YOU FIND YOURSELF IN A MOAT IN FRONT OF A CASTLE.');
-  print('THERE IS SOMETHING ELSE IN THE WATER WITH YOU. IT IS MONSTER.');
+  print('THERE IS SOMETHING ELSE IN THE WATER WITH YOU. IT IS A MONSTER.');
+  print('WOULD YOU LIKE TO FEED THE MONSTER?');
   showChoices([
     { label: '1 - YES (FEED THE MONSTER)', next: 'feedMonster' },
     { label: '2 - NO',                     next: 'dontFeed' },
@@ -565,7 +565,7 @@ nodes['noFightTarik'] = function() {
 nodes['hearInfo'] = function() {
   clear();
   print('TARIK SAYS, "I HAVE BEEN TALKING TO A WIZARD AND HE HAS TOLD');
-  print('ME THAT A MAGICAL PEARL EXISTS. HE TELLS ME THAT IT CAN BE FOUND');
+  print('ME THAT A MAGICAL PEARL EXISTS. HE SAYS THAT IT CAN BE FOUND');
   print('IN THE TIME OF THE DINOSAURS. HE TELLS ME OF THE GREAT DANGER');
   print('THE PEARL POSSESSES IF PLACED IN THE WRONG HANDS. THIS IS WHY');
   print('WE NEED A GREAT WARRIOR TO JOURNEY BACK IN TIME TO FIND THE PEARL.');
@@ -599,7 +599,7 @@ nodes['helpYes'] = function() {
   print('TARIK SAYS HE IS HAPPY WITH YOUR CHOICE TO HELP HIM. HE GIVES YOU A');
   print('MAP WHICH LEADS TO THE TALKING TREE. THE TALKING TREE IS WHERE THE TIME');
   print('WARP LIES. HE ALSO GIVES YOU 3 BOTTLES OF MAGIC AND A SWORD. HE TELLS');
-  print('TO BE CAREFUL ON YOUR JOURNEY AND TO USE YOUR MAGIC WISELY.');
+  print('YOU TO BE CAREFUL ON YOUR JOURNEY AND TO USE YOUR MAGIC WISELY.');
   blank();
   print('YOU SET OFF ON YOUR JOURNEY TO THE TALKING TREE. YOU WALK ALONG QUICKLY.');
   print('AFTER MANY HOURS OF WALKING YOU COME ACROSS A FORK IN THE ROAD. THE');
@@ -882,12 +882,12 @@ nodes['dontHearInfo'] = function() {
   print('INTO ANOTHER TIME WARP.');
   blank();
   print('YOU AWAKE TO FIND YOURSELF ON A JAPANESE SUBMARINE IN WORLD WAR II.');
-  print('THERE ARE A BUNCH OF MEN ON BOARD AND THEY ARE ALL TALKING');
+  print('THERE ARE A BUNCH OF MEN ON BOARD AND THEY ARE ALL SPEAKING');
   print('JAPANESE. YOU DO NOT UNDERSTAND THEM. BUT LUCKILY YOU BROUGHT');
   print('ALONG YOUR TRUSTY SEWERMAN LANGUAGE TRANSLATOR. YOU CAN NOW');
   print('UNDERSTAND EVERYTHING THEY ARE SAYING. YOU HEAR THE CAPTAIN');
-  print('SAY, "LETS SINK US AMERICAN SHIP. I BET 20 DOLLAR I CAN SINK');
-  print('SHIP WITH ONE TORPEDO." JUST AS THE CAPTAIN MUTTERS');
+  print('SAY, "LET US SINK AN AMERICAN SHIP. I BET 20 US DOLLARS I CAN SINK');
+  print('A SHIP WITH ONE TORPEDO." JUST AS THE CAPTAIN MUTTERS');
   print('HIS LAST WORD ALL THE JAPANESE MEN NOTICE YOU. AT THAT INSTANT');
   print('THEY ALL HOLD THERE NOSE AND BACK AWAY.');
   print('WHAT DO YOU WANT TO DO?');
